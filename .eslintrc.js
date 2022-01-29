@@ -4,6 +4,7 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:@typescript-eslint/recommended-requiring-type-checking',
     'plugin:import/typescript',
+    'plugin:jest/recommended',
     'plugin:node/recommended-module',
     'prettier',
   ],
@@ -11,7 +12,14 @@ module.exports = {
   parserOptions: {
     project: './tsconfig.json',
   },
-  plugins: ['@typescript-eslint', 'import', 'node', 'prefer-arrow', 'unicorn'],
+  plugins: [
+    '@typescript-eslint',
+    'import',
+    'jest',
+    'node',
+    'prefer-arrow',
+    'unicorn',
+  ],
   env: {
     node: true,
   },
@@ -182,4 +190,12 @@ module.exports = {
     'unicorn/require-number-to-fixed-digits-argument': 2,
     'unicorn/throw-new-error': 2,
   },
+  overrides: [
+    {
+      files: ['./test/**'],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 0,
+      },
+    },
+  ],
 }
