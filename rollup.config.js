@@ -6,6 +6,7 @@ export default {
     dir: 'dist',
     format: 'cjs',
   },
+  external: ['fs', 'path'],
   plugins: [
     ts({
       tsconfig: 'tsconfig.build.json',
