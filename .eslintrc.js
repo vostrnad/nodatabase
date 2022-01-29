@@ -192,9 +192,23 @@ module.exports = {
   },
   overrides: [
     {
+      files: ['*.js'],
+      rules: {
+        '@typescript-eslint/explicit-module-boundary-types': 0,
+        '@typescript-eslint/no-var-requires': 0,
+        'unicorn/numeric-separators-style': 0,
+      },
+    },
+    {
       files: ['./test/**'],
       rules: {
         '@typescript-eslint/no-explicit-any': 0,
+      },
+    },
+    {
+      files: ['./benchmark/**'],
+      rules: {
+        'no-console': 0,
       },
     },
   ],

@@ -25,6 +25,7 @@
     "dist"
   ],
   "scripts": {
+    "benchmark": "yarn build && node benchmark",
     "build": "rollup -c",
     "coverage": "yarn test --coverage",
     "lint": "prettier --check . && eslint .",
