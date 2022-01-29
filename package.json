@@ -1,0 +1,54 @@
+{
+  "name": "nodatabase",
+  "version": "0.1.0",
+  "description": "A simple persistent in-memory database.",
+  "keywords": [
+    "database",
+    "db",
+    "storage",
+    "in-memory",
+    "memory"
+  ],
+  "homepage": "https://github.com/vostrnad/nodatabase#readme",
+  "bugs": {
+    "url": "https://github.com/vostrnad/nodatabase/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vostrnad/nodatabase.git"
+  },
+  "license": "MIT",
+  "author": "Vojtěch Strnad",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "lint": "prettier --check . && eslint .",
+    "prepack": "rimraf dist && yarn build"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.21",
+    "@typescript-eslint/eslint-plugin": "^5.10.1",
+    "@typescript-eslint/parser": "^5.10.1",
+    "eslint": "^8.8.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prefer-arrow": "^1.2.3",
+    "eslint-plugin-unicorn": "^40.1.0",
+    "husky": "^4.3.8",
+    "lint-staged": "^12.3.2",
+    "prettier": "^2.5.1",
+    "prettier-plugin-packagejson": "^2.2.15",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.66.1",
+    "rollup-plugin-ts": "^2.0.5",
+    "typescript": "^4.5.5"
+  },
+  "engines": {
+    "node": "^10.17.0 || >=12"
+  }
+}
