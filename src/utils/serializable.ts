@@ -1,4 +1,46 @@
-import { PartialDeepObjects, Serializable, SerializableObject } from '../types'
+import {
+  PartialDeepObjects,
+  PartialSerializable,
+  Serializable,
+  SerializableObject,
+} from '../types'
+
+export const partialEqual = (
+  object: Serializable | undefined,
+  query: PartialSerializable | undefined,
+): boolean => {
+  if (object === query) {
+    return true
+  }
+
+  if (!object || !query) {
+    return false
+  }
+
+  if (typeof object !== 'object' || typeof query !== 'object') {
+    return false
+  }
+
+  if (Array.isArray(object)) {
+    if (!Array.isArray(query)) {
+      return false
+    }
+
+    if (object.length !== query.length) {
+      return false
+    }
+
+    return object.every((item, index) => partialEqual(item, query[index]))
+  }
+
+  if (Array.isArray(query)) {
+    return false
+  }
+
+  return Object.keys(query).every((key) => {
+    return partialEqual(object[key], query[key])
+  })
+}
 
 export const deepClone = <T extends Serializable>(object: T): T => {
   if (typeof object !== 'object' || object === null) {

@@ -1,3 +1,9 @@
+export type PartialDeep<T> = Serializable extends T
+  ? Serializable
+  : SerializableObject extends T
+  ? PartialSerializableObject
+  : { [P in keyof T]?: PartialDeep<T[P]> }
+
 export type PartialDeepObjects<T> = Serializable extends T
   ? Serializable
   : SerializableObject extends T
