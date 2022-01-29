@@ -49,14 +49,17 @@ export class SingleValue<T extends Serializable> extends Storage<T, null> {
     })
   }
 
+  /* istanbul ignore next */
   protected applyOperation(): T {
     throw new Error('Method not allowed')
   }
 
+  /* istanbul ignore next */
   protected serializeOperation(): string {
     throw new Error('Method not allowed')
   }
 
+  /* istanbul ignore next */
   protected deserializeOperation(): null {
     throw new Error('Method not allowed')
   }

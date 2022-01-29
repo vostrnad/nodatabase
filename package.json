@@ -26,6 +26,7 @@
   ],
   "scripts": {
     "build": "rollup -c",
+    "coverage": "yarn test --coverage",
     "lint": "prettier --check . && eslint .",
     "prepack": "rimraf dist && yarn build",
     "test": "jest --verbose ./test"
