@@ -38,7 +38,7 @@ describe('KeyValueDatabase', () => {
     expect(db.get('key')).toEqual({ a: 1, b: 'test' })
   })
 
-  it('should return keys and values', async () => {
+  it('should return keys, values and entries', async () => {
     await Promise.all([
       db.set('key1', 'value1'),
       db.set('key2', 'value2'),
@@ -46,6 +46,11 @@ describe('KeyValueDatabase', () => {
     ])
     expect(db.keys).toEqual(['key1', 'key2', 'key3'])
     expect(db.values).toEqual(['value1', 'value2', 'value3'])
+    expect(db.entries).toEqual([
+      ['key1', 'value1'],
+      ['key2', 'value2'],
+      ['key3', 'value3'],
+    ])
   })
 
   it('should update an object', async () => {

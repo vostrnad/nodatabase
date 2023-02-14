@@ -164,6 +164,10 @@ A getter than returns an array of all existing keys.
 
 A getter that returns an array of all stored values.
 
+#### `.entries`
+
+A getter that returns an array of all stored key-value pairs.
+
 #### `.has(key)`
 
 Returns true if the given key exists in the database, false otherwise.

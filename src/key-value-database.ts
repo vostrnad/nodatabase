@@ -75,6 +75,13 @@ export class KeyValueDatabase<T extends Serializable> extends Storage<
     return Object.values(this.data).map(deepClone)
   }
 
+  get entries(): Array<[string, T]> {
+    return Object.entries(this.data).map(([key, value]) => [
+      key,
+      deepClone(value),
+    ])
+  }
+
   /**
    * Returns true if the given key exists in the database, false otherwise.
    */
