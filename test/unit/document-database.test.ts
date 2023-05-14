@@ -132,7 +132,9 @@ describe('DocumentDatabase', () => {
       db.insert({ name: 'two', value: 2 }),
       db.insert({ name: 'three', value: 3 }),
     ])
-    await expect(db.insert({ name: 'four', value: 4 })).toReject()
+    await expect(db.insert({ name: 'four', value: 4 })).rejects.toThrow(
+      new Error('Maximum number of documents exceeded'),
+    )
   })
 
   it('should persist documents from a previous instance', async () => {
@@ -276,6 +278,16 @@ describe('DocumentDatabase', () => {
 
     expect(db.findMany({})).toEqual(snapshot)
     expect(db.size).toEqual(snapshotSize)
+  })
+
+  it('returns a cloned writable object', async () => {
+    await db.insert({ key: 'value1' })
+    await db.update({ key: 'value1' }, { key: 'value2' })
+    const res = db.findOne({ key: 'value2' }) as Document
+    expect(res).toEqual({ key: 'value2' })
+    res.key = 'value3'
+    expect(res).toEqual({ key: 'value3' })
+    expect(db.findOne({ key: 'value2' })).toEqual({ key: 'value2' })
   })
 
   it('preserves __proto__ and avoids prototype pollution', async () => {

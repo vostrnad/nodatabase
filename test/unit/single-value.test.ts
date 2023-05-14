@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { Serializable } from '../../src'
+import { SerializableObject } from '../../src/types'
 import { createSingleValue } from '../factory'
 import { generate, removeAllFiles, tmpDirPath } from '../utils'
 
@@ -99,6 +100,20 @@ describe('SingleValue', () => {
     await expect(db.set(array)).toReject()
 
     expect(db.value).toEqual('first')
+  })
+
+  it('returns a cloned writable object', async () => {
+    const db = await createSingleValue<Serializable>({
+      dirPath: DIR_PATH,
+      defaultValue: { key: 'value' },
+    })
+    await db.set({ key: 'value1' })
+    await db.update({ key: 'value2' })
+    const res = db.value as SerializableObject
+    expect(res).toEqual({ key: 'value2' })
+    res.key = 'value3'
+    expect(res).toEqual({ key: 'value3' })
+    expect(db.value).toEqual({ key: 'value2' })
   })
 
   it('preserves __proto__ and avoids prototype pollution', async () => {

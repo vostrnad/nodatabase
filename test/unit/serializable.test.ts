@@ -42,16 +42,30 @@ describe('Serializable', () => {
     })
 
     it('should reject unequal objects', () => {
-      expect(partialEqual('one', 'two')).toBeFalse()
-      expect(partialEqual('', 0)).toBeFalse()
-      expect(partialEqual([], '')).toBeFalse()
-      expect(partialEqual('', [])).toBeFalse()
-      expect(partialEqual([], {})).toBeFalse()
-      expect(partialEqual({}, [])).toBeFalse()
-      expect(partialEqual([[]], [])).toBeFalse()
-      expect(
-        partialEqual({ a: { b: { c: 1 } } }, { a: { b: { c: 2 } } }),
-      ).toBeFalse()
+      const checkSymmetricNotEqual = (
+        a: Serializable | undefined,
+        b: Serializable | undefined,
+      ) => {
+        expect(partialEqual(a, b)).toBeFalse()
+        expect(partialEqual(b, a)).toBeFalse()
+      }
+
+      checkSymmetricNotEqual('one', 'two')
+      checkSymmetricNotEqual('', 0)
+      checkSymmetricNotEqual('', [])
+      checkSymmetricNotEqual('', {})
+      checkSymmetricNotEqual('a', ['a'])
+      checkSymmetricNotEqual('a', { 0: 'a' })
+      checkSymmetricNotEqual('a', { 0: 'a', length: 1 })
+      checkSymmetricNotEqual(['a'], { 0: 'a' })
+      checkSymmetricNotEqual(['a'], { 0: 'a', length: 1 })
+      checkSymmetricNotEqual({}, null)
+      checkSymmetricNotEqual({}, [])
+      checkSymmetricNotEqual([[]], [])
+      checkSymmetricNotEqual({ a: { b: { c: 1 } } }, { a: { b: { c: 2 } } })
+      // @ts-expect-error Test an array with an explicit undefined element
+      // against an empty array with an implicit undefined element.
+      checkSymmetricNotEqual([undefined], [])
     })
   })
 
@@ -110,16 +124,19 @@ describe('Serializable', () => {
     it('should merge two complicated objects', () => {
       const object = {
         a: { b: { c: 'test1' }, d: 'test2', e: [{ f: 1 }, { g: 2 }] },
+        l: { m: 5 },
       }
       const source = {
         a: { d: 'test3', e: [{ h: 3 }, { i: 4 }] },
         j: { k: 5 },
+        l: null,
       }
       merge(object as AnyObject, source as AnyObject)
 
       expect(object).toEqual({
         a: { b: { c: 'test1' }, d: 'test3', e: [{ h: 3 }, { i: 4 }] },
         j: { k: 5 },
+        l: null,
       })
     })
   })

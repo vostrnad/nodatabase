@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { KeyValueDatabase, Serializable } from '../../src'
+import { SerializableObject } from '../../src/types'
 import { createKeyValueDatabase } from '../factory'
 import { removeAllFiles, tmpDirPath } from '../utils'
 
@@ -78,6 +79,12 @@ describe('KeyValueDatabase', () => {
     expect(db.size).toEqual(0)
   })
 
+  it('should ignore deleting a non-existent value', async () => {
+    await db.delete('key')
+    expect(db.get('key')).toBeUndefined()
+    expect(db.size).toEqual(0)
+  })
+
   it('should clear the database', async () => {
     await Promise.all([
       db.set('key1', 'value1'),
@@ -120,7 +127,9 @@ describe('KeyValueDatabase', () => {
       db.set('key2', 'value2'),
       db.set('key3', 'value3'),
     ])
-    await expect(db.set('key4', 'value4')).toReject()
+    await expect(db.set('key4', 'value4')).rejects.toThrow(
+      new Error('Maximum number of items exceeded'),
+    )
     // should not reject because it's not a new item
     await db.set('key1', 'value5')
     expect(db.get('key1')).toEqual('value5')
@@ -154,6 +163,16 @@ describe('KeyValueDatabase', () => {
 
     expect(db.size).toEqual(0)
     expect(db.get('preserved-key')).toBeUndefined()
+  })
+
+  it('returns a cloned writable object', async () => {
+    await db.set('key', { a: 1 })
+    await db.update('key', { a: 2 })
+    const res = db.get('key') as SerializableObject
+    expect(res).toEqual({ a: 2 })
+    res.a = 3
+    expect(res).toEqual({ a: 3 })
+    expect(db.get('key')).toEqual({ a: 2 })
   })
 
   it('preserves __proto__ and avoids prototype pollution', async () => {
