@@ -155,4 +155,22 @@ describe('KeyValueDatabase', () => {
     expect(db.size).toEqual(0)
     expect(db.get('preserved-key')).toBeUndefined()
   })
+
+  it('preserves __proto__ and avoids prototype pollution', async () => {
+    await db.set('__proto__', { admin: true })
+
+    expect(db.get('__proto__')).toEqual({ admin: true })
+    expect(db.get('admin')).toBeUndefined()
+    expect(db.keys).toEqual(['__proto__'])
+    expect('admin' in {}).toBeFalse()
+
+    db = await createKeyValueDatabase({
+      dirPath: DIR_PATH,
+    })
+
+    expect(db.get('__proto__')).toEqual({ admin: true })
+    expect(db.get('admin')).toBeUndefined()
+    expect(db.keys).toEqual(['__proto__'])
+    expect('admin' in {}).toBeFalse()
+  })
 })

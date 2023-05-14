@@ -1,6 +1,6 @@
 import { Storage } from './storage'
 import { PartialDeepObjects, Serializable } from './types'
-import { deepClone, merge } from './utils/serializable'
+import { assignPropertySafe, deepClone, merge } from './utils/serializable'
 import { hasAnyOfAtKey, hasKey, hasStringAtKey } from './utils/validation'
 
 type StorageData<T extends Serializable> = Record<string, T>
@@ -170,7 +170,7 @@ export class KeyValueDatabase<T extends Serializable> extends Storage<
   ): StorageData<T> {
     switch (operation.type) {
       case 'create':
-        data[operation.key] = deepClone(operation.data)
+        assignPropertySafe(data, operation.key, deepClone(operation.data))
         break
       case 'update':
         if (!(operation.key in data)) {

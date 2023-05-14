@@ -42,6 +42,19 @@ export const partialEqual = (
   })
 }
 
+export const assignPropertySafe = <T, K extends keyof T>(
+  object: T,
+  key: K,
+  value: T[K],
+): void => {
+  Object.defineProperty(object, key, {
+    value,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  })
+}
+
 export const deepClone = <T extends Serializable>(object: T): T => {
   if (typeof object !== 'object' || object === null) {
     return object
@@ -76,7 +89,7 @@ export const merge = <T extends SerializableObject>(
     ) {
       merge(objectKeyRef, sourceKeyRef)
     } else {
-      object[key] = deepClone(sourceKeyRef)
+      assignPropertySafe(object, key, deepClone(sourceKeyRef))
     }
   })
 }
@@ -91,7 +104,7 @@ const mapObject = <
   const newObject = {} as P
 
   Object.keys(object).forEach((key: string & keyof T) => {
-    newObject[key] = callbackfn(object[key], key)
+    assignPropertySafe(newObject, key, callbackfn(object[key], key))
   })
 
   return newObject

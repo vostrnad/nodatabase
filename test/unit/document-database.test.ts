@@ -278,6 +278,20 @@ describe('DocumentDatabase', () => {
     expect(db.size).toEqual(snapshotSize)
   })
 
+  it('preserves __proto__ and avoids prototype pollution', async () => {
+    await db.insert({ ['__proto__']: { admin: true } })
+
+    expect(db.findMany({})).toEqual([{ ['__proto__']: { admin: true } }])
+    expect('admin' in {}).toBeFalse()
+
+    db = await createDocumentDatabase({
+      dirPath: DIR_PATH,
+    })
+
+    expect(db.findMany({})).toEqual([{ ['__proto__']: { admin: true } }])
+    expect('admin' in {}).toBeFalse()
+  })
+
   it('should have correct types', async () => {
     type Schema = {
       name: string

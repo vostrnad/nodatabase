@@ -100,4 +100,36 @@ describe('SingleValue', () => {
 
     expect(db.value).toEqual('first')
   })
+
+  it('preserves __proto__ and avoids prototype pollution', async () => {
+    let db = await createSingleValue({
+      dirPath: DIR_PATH,
+      defaultValue: { ['__proto__']: { admin: true } },
+    })
+
+    expect(db.value).toEqual({ ['__proto__']: { admin: true } })
+    expect('admin' in db.value).toBeFalse()
+    expect('admin' in {}).toBeFalse()
+
+    await db.set({ ['__proto__']: { admin: true } })
+
+    expect(db.value).toEqual({ ['__proto__']: { admin: true } })
+    expect('admin' in db.value).toBeFalse()
+    expect('admin' in {}).toBeFalse()
+
+    await db.update({ ['__proto__']: { admin: true } })
+
+    expect(db.value).toEqual({ ['__proto__']: { admin: true } })
+    expect('admin' in db.value).toBeFalse()
+    expect('admin' in {}).toBeFalse()
+
+    db = await createSingleValue({
+      dirPath: DIR_PATH,
+      defaultValue: { ['__proto__']: { admin: true } },
+    })
+
+    expect(db.value).toEqual({ ['__proto__']: { admin: true } })
+    expect('admin' in db.value).toBeFalse()
+    expect('admin' in {}).toBeFalse()
+  })
 })
