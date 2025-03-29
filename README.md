@@ -240,7 +240,7 @@ A getter that returns the number of stored documents.
 Finds and returns the first document that matches the query. Returns undefined
 if no documents match.
 
-#### `.findMany(query)`
+#### `.findMany(query, options)`
 
 Returns an array of documents that match the query.
 
@@ -252,7 +252,7 @@ Inserts a new document into the database.
 
 Updates all database documents that match the query.
 
-#### `.delete(query)`
+#### `.delete(query, options)`
 
 Deletes all database documents that match the query.
 

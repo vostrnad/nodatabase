@@ -1,5 +1,10 @@
 import { Storage } from './storage'
-import { PartialDeep, PartialDeepObjects, Serializable } from './types'
+import {
+  PartialDeep,
+  PartialDeepObjects,
+  Serializable,
+  SerializableObject,
+} from './types'
 import {
   assignPropertySafe,
   deepClone,
@@ -30,6 +35,19 @@ type Indexable = string | number | boolean | null
 
 type QueryType<T> = PartialDeep<T>
 type UpdateType<T> = PartialDeepObjects<T>
+
+type QueryOptions<T extends Document> = {
+  limit?: number
+  sort?: Array<SortOption<T>>
+}
+
+type SortOption<T> = {
+  [K in keyof T]?: T[K] extends string | number | null
+    ? 'asc' | 'desc'
+    : T extends SerializableObject
+    ? SortOption<T[K]>
+    : never
+}
 
 export type Document = Record<string, Serializable>
 
@@ -140,12 +158,10 @@ export class DocumentDatabase<T extends Document> extends Storage<
    * @param query An object that should partially match the desired documents.
    * Nested objects are partially matched deeply. Arrays must partially match
    * all elements.
+   * @param options Query options for sorting and limiting.
    */
-  findMany(query: QueryType<T>): T[] {
-    return this.searchIndex(query)
-      .filter((key) => partialEqual(this.data[key], query))
-      .map((key) => this.data[key])
-      .map(deepClone)
+  findMany(query: QueryType<T>, options?: QueryOptions<T>): T[] {
+    return this.findKeys(query, options).map((key) => deepClone(this.data[key]))
   }
 
   /**
@@ -190,9 +206,7 @@ export class DocumentDatabase<T extends Document> extends Storage<
    */
   async update(query: QueryType<T>, update: UpdateType<T>): Promise<void> {
     await this.commitOperation(() => {
-      const keys = this.searchIndex(query).filter((key) =>
-        partialEqual(this.data[key], query),
-      )
+      const keys = this.findKeys(query, undefined)
 
       if (this.indexes) {
         Object.keys(update).forEach((fieldName) => {
@@ -226,12 +240,11 @@ export class DocumentDatabase<T extends Document> extends Storage<
    * @param query An object that should partially match the desired documents.
    * Nested objects are partially matched deeply. Arrays must partially match
    * all elements.
+   * @param options Query options for sorting and limiting.
    */
-  async delete(query: QueryType<T>): Promise<void> {
+  async delete(query: QueryType<T>, options?: QueryOptions<T>): Promise<void> {
     await this.commitOperation(() => {
-      const keys = this.searchIndex(query).filter((key) =>
-        partialEqual(this.data[key], query),
-      )
+      const keys = this.findKeys(query, options)
       this.documentCount -= keys.length
 
       if (this.indexes) {
@@ -357,6 +370,41 @@ export class DocumentDatabase<T extends Document> extends Storage<
     }
   }
 
+  private findKeys(
+    query: QueryType<T>,
+    options: QueryOptions<T> | undefined,
+  ): string[] {
+    let res = this.searchIndex(query).filter((key) =>
+      partialEqual(this.data[key], query),
+    )
+
+    if (options?.sort?.length && res.length > 1) {
+      const sortOptions = options.sort.map((value) => ({
+        value,
+        direction: this.getSortOptionDirection(value),
+      }))
+      res = res.sort((aKey, bKey) => {
+        const aDocument = this.data[aKey]
+        const bDocument = this.data[bKey]
+        for (const sortOption of sortOptions) {
+          const aValue = this.getSortOptionValue(aDocument, sortOption.value)
+          const bValue = this.getSortOptionValue(bDocument, sortOption.value)
+          const cmp = this.compareSortableValues(aValue, bValue)
+          if (cmp !== 0) {
+            return sortOption.direction === 'asc' ? cmp : -cmp
+          }
+        }
+        return 0
+      })
+    }
+
+    if (options?.limit !== undefined) {
+      res = res.slice(0, options.limit)
+    }
+
+    return res
+  }
+
   private searchIndex(query: QueryType<T>): string[] {
     if (!this.indexes) {
       return Object.keys(this.data)
@@ -422,5 +470,86 @@ export class DocumentDatabase<T extends Document> extends Storage<
       typeof value === 'boolean' ||
       value === null
     )
+  }
+
+  private getSortOptionValue<U extends SerializableObject>(
+    document: U,
+    option: SortOption<U>,
+  ): string | number | null | undefined {
+    const keys = Object.keys(option) as Array<keyof U>
+    /* istanbul ignore next */
+    if (keys.length === 0) {
+      throw new Error('No keys in sort object')
+    }
+    /* istanbul ignore next */
+    if (keys.length > 1) {
+      throw new Error('Only one key is allowed in sort object')
+    }
+    const key = keys[0]
+    const documentValue = document[key]
+    const optionValue = option[key]
+    if (
+      typeof optionValue === 'string' &&
+      (typeof documentValue === 'string' ||
+        typeof documentValue === 'number' ||
+        documentValue === null)
+    ) {
+      return documentValue
+    }
+    if (
+      optionValue &&
+      documentValue &&
+      typeof optionValue === 'object' &&
+      typeof documentValue === 'object' &&
+      !Array.isArray(documentValue)
+    ) {
+      return this.getSortOptionValue(documentValue, optionValue)
+    }
+  }
+
+  private getSortOptionDirection<U extends SerializableObject>(
+    option: SortOption<U>,
+  ): 'asc' | 'desc' {
+    const keys = Object.keys(option) as Array<keyof U>
+    if (keys.length === 0) {
+      throw new Error('No keys in sort object')
+    }
+    if (keys.length > 1) {
+      throw new Error('Only one key is allowed in sort object')
+    }
+    const value = option[keys[0]]
+    if (typeof value === 'string') {
+      if (!['asc', 'desc'].includes(value)) {
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+        throw new Error(`Invalid sort direction ${value}`)
+      }
+      return value
+    }
+    if (typeof value === 'object') {
+      return this.getSortOptionDirection(value)
+    }
+    throw new Error('Invalid sort object')
+  }
+
+  private compareSortableValues(
+    a: string | number | null | undefined,
+    b: string | number | null | undefined,
+  ): number {
+    if ((a === undefined || a === null) && (b === undefined || b === null)) {
+      return 0
+    }
+    if (a === undefined || a === null) {
+      return 1
+    }
+    if (b === undefined || b === null) {
+      return -1
+    }
+    if (typeof a === 'number' && typeof b === 'number') {
+      return a - b
+    }
+    if (typeof a === 'string' && typeof b === 'string') {
+      return a < b ? -1 : a > b ? 1 : 0
+    }
+    return typeof a === 'number' ? -1 : 1
   }
 }

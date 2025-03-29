@@ -48,6 +48,87 @@ describe('DocumentDatabase', () => {
     expect(db.findOne({ name: 'two' })).toEqual({ name: 'two', value: 2 })
   })
 
+  it('should sort and limit found documents', async () => {
+    await Promise.all([
+      db.insert({ key1: 'a', key2: 2 }),
+      db.insert({ key1: 'b', key2: 3 }),
+      db.insert({ key1: 'c', key2: 1 }),
+      db.insert({ key1: null, key2: null }),
+    ])
+    expect(db.findMany({}, { sort: [{ key1: 'asc' }] })).toEqual([
+      { key1: 'a', key2: 2 },
+      { key1: 'b', key2: 3 },
+      { key1: 'c', key2: 1 },
+      { key1: null, key2: null },
+    ])
+    expect(db.findMany({}, { sort: [{ key1: 'desc' }] })).toEqual([
+      { key1: null, key2: null },
+      { key1: 'c', key2: 1 },
+      { key1: 'b', key2: 3 },
+      { key1: 'a', key2: 2 },
+    ])
+    expect(db.findMany({}, { sort: [{ key2: 'asc' }] })).toEqual([
+      { key1: 'c', key2: 1 },
+      { key1: 'a', key2: 2 },
+      { key1: 'b', key2: 3 },
+      { key1: null, key2: null },
+    ])
+    expect(db.findMany({}, { sort: [{ key2: 'desc' }] })).toEqual([
+      { key1: null, key2: null },
+      { key1: 'b', key2: 3 },
+      { key1: 'a', key2: 2 },
+      { key1: 'c', key2: 1 },
+    ])
+    expect(db.findMany({}, { sort: [{ key1: 'asc' }], limit: 1 })).toEqual([
+      { key1: 'a', key2: 2 },
+    ])
+    expect(db.findMany({}, { sort: [{ key1: 'desc' }], limit: 2 })).toEqual([
+      { key1: null, key2: null },
+      { key1: 'c', key2: 1 },
+    ])
+    expect(db.findMany({}, { sort: [{ key2: 'asc' }], limit: 1 })).toEqual([
+      { key1: 'c', key2: 1 },
+    ])
+    expect(db.findMany({}, { sort: [{ key2: 'desc' }], limit: 2 })).toEqual([
+      { key1: null, key2: null },
+      { key1: 'b', key2: 3 },
+    ])
+  })
+
+  it('should sort found documents using multiple deep keys', async () => {
+    await Promise.all([
+      db.insert({ a: { b: 'a' }, c: { d: 1 } }),
+      db.insert({ a: { b: 'b' }, c: { d: 1 } }),
+      db.insert({ a: { b: 'a' }, c: { d: 2 } }),
+      db.insert({ a: { b: 'b' }, c: { d: 2 } }),
+      db.insert({ a: { b: 'b' }, c: { d: 2 } }),
+    ])
+    expect(
+      db.findMany({}, { sort: [{ a: { b: 'asc' } }, { c: { d: 'desc' } }] }),
+    ).toEqual([
+      { a: { b: 'a' }, c: { d: 2 } },
+      { a: { b: 'a' }, c: { d: 1 } },
+      { a: { b: 'b' }, c: { d: 2 } },
+      { a: { b: 'b' }, c: { d: 2 } },
+      { a: { b: 'b' }, c: { d: 1 } },
+    ])
+  })
+
+  it('should sort numbers before strings', async () => {
+    await Promise.all([
+      db.insert({ value: '1' }),
+      db.insert({ value: 1 }),
+      db.insert({ value: '2' }),
+      db.insert({ value: 2 }),
+    ])
+    expect(db.findMany({}, { sort: [{ value: 'asc' }] })).toEqual([
+      { value: 1 },
+      { value: 2 },
+      { value: '1' },
+      { value: '2' },
+    ])
+  })
+
   it('should update an object', async () => {
     db = await createDocumentDatabase({
       dirPath: DIR_PATH,
@@ -83,6 +164,18 @@ describe('DocumentDatabase', () => {
     await db.insert({ delete: 'this' })
     await db.delete({ delete: 'this', but: 'not that' })
     expect(db.findMany({ delete: 'this' })).toHaveLength(1)
+  })
+
+  it('should delete a specified number of sorted documents', async () => {
+    await Promise.all([
+      db.insert({ value: 3 }),
+      db.insert({ value: 2 }),
+      db.insert({ value: 4 }),
+      db.insert({ value: 1 }),
+      db.insert({ value: 5 }),
+    ])
+    await db.delete({}, { sort: [{ value: 'desc' }], limit: 3 })
+    expect(db.findMany({})).toEqual([{ value: 2 }, { value: 1 }])
   })
 
   it('should clear the database', async () => {
@@ -304,6 +397,23 @@ describe('DocumentDatabase', () => {
     expect('admin' in {}).toBeFalse()
   })
 
+  it('should throw errors on invalid sort options', async () => {
+    await db.insert({ key: 'value1' })
+    await db.insert({ key: 'value2' })
+    expect(() => db.findMany({}, { sort: [{}] })).toThrowError(
+      'No keys in sort object',
+    )
+    expect(() =>
+      db.findMany({}, { sort: [{ key1: 'asc', key2: 'desc' }] }),
+    ).toThrowError('Only one key is allowed in sort object')
+    expect(() =>
+      db.findMany({}, { sort: [{ value: 'ascdesc' }] }),
+    ).toThrowError('Invalid sort direction ascdesc')
+    expect(() => db.findMany({}, { sort: [{ value: 1 }] })).toThrowError(
+      'Invalid sort object',
+    )
+  })
+
   it('should have correct types', async () => {
     type Schema = {
       name: string
@@ -365,7 +475,19 @@ describe('DocumentDatabase', () => {
       { messages: [{ deleted: true }] },
     )
 
-    expect(db.findMany({})).toEqual([
+    expect(
+      db.findMany(
+        {},
+        {
+          sort: [
+            { stats: { sentMessages: 'asc' } },
+            // @ts-expect-error error expected as part of test
+            { stats: { anotherField: 'desc' } },
+          ],
+          limit: 5,
+        },
+      ),
+    ).toEqual([
       {
         name: 'Alice',
         stats: {
